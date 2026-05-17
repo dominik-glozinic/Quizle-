@@ -1,0 +1,44 @@
+@startuml quiz_app_screenflow
+
+skinparam activityBackgroundColor #F8F8F8
+skinparam activityBorderColor #888888
+skinparam activityFontSize 13
+skinparam arrowColor #555555
+skinparam activityDiamondBackgroundColor #FFF8E0
+skinparam activityDiamondBorderColor #AAAAAA
+skinparam swimlaneBackgroundColor #FAFAFA
+skinparam linetype ortho
+
+title Screen-Flow – Quiz App
+
+|Gemeinsam|
+start
+:Home Screen\n//„Host a Quiz" / „Join a Quiz"//;
+
+fork
+
+|Host-Flow|
+  :Quiz erstellen\n//Fragen & Antworten eingeben//;
+  :Lobby (Host)\n//Room-Code anzeigen, warten//;
+  :Quiz leiten\n//Frage senden, Antworten sehen//;
+
+fork again
+
+|Player-Flow|
+  :Beitreten\n//Room-Code & Username eingeben//;
+  :Warten (Lobby)\n//Auf Spielstart warten//;
+  :Quiz spielen\n//Fragen empfangen, antworten//;
+
+end fork
+
+|Gemeinsam|
+:Ergebnis-Screen\n//Rangliste & Gewinner anzeigen//;
+
+if (Nochmal spielen?) then (ja)
+  :Home Screen\n//„Host a Quiz" / „Join a Quiz"//;
+  detach
+else (nein)
+  stop
+endif
+
+@enduml

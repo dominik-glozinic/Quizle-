@@ -1,0 +1,140 @@
+@startuml quiz_app_mvvm
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam classBackgroundColor #F8F8F8
+skinparam classBorderColor #888888
+skinparam arrowColor #555555
+skinparam linetype ortho
+
+package "UI-Schicht" #EEF0FF {
+
+  class MainActivity {
+    - navController: NavController
+    --
+    + onCreate()
+    + onStart()
+    + navigateTo(dest: Int)
+  }
+
+  class HostActivity {
+    - binding: ActivityHostBinding
+    --
+    + onCreate()
+    + onStart()
+    + observeViewModel()
+  }
+
+  class PlayerActivity {
+    - binding: ActivityPlayerBinding
+    --
+    + onCreate()
+    + onStart()
+    + observeViewModel()
+  }
+
+  class LobbyFragment {
+    - binding: FragLobbyBinding
+    --
+    + onViewCreated()
+    + showRoomCode(code: String)
+    + onStartClicked()
+  }
+
+  class HostQuizFragment {
+    - binding: FragHostQuizBinding
+    --
+    + showQuestion(q: Question)
+    + showAnswerStats()
+    + onNextClicked()
+  }
+
+  class PlayerQuizFragment {
+    - binding: FragPlayerQuizBinding
+    --
+    + showQuestion(q: Question)
+    + showAnswerChoices()
+    + onAnswerSelected(a: String)
+  }
+
+  class ResultFragment {
+    - binding: FragResultBinding
+    --
+    + showScoreBoard(sb: ScoreBoard)
+    + highlightWinner(p: Player)
+  }
+
+}
+
+package "ViewModel-Schicht" #FFF0EE {
+
+  class HostViewModel {
+    - session: QuizSession
+    --
+    + sessionState: LiveData<SessionState>
+    + currentQuestion: LiveData<Question>
+    + playerAnswers: LiveData<List<Answer>>
+    --
+    + createSession()
+    + startSession()
+    + sendNextQuestion()
+  }
+
+  class PlayerViewModel {
+    - player: Player
+    --
+    + currentQuestion: LiveData<Question>
+    + score: LiveData<Int>
+    + finalScores: LiveData<ScoreBoard>
+    --
+    + joinSession(code: String)
+    + submitAnswer(a: Answer)
+    + loadFinalScores()
+  }
+
+  class SharedViewModel {
+    - network: INetwork
+    --
+    + connectionState: LiveData<Boolean>
+    --
+    + connect(url: String)
+    + disconnect()
+  }
+
+}
+
+package "Domain-Schicht (Referenz)" #F0F0F0 {
+  class QuizSession
+  class Question
+  class Answer
+  class ScoreBoard
+  interface INetwork
+}
+
+' Activity hostet Fragments (gestrichelt)
+HostActivity ..> LobbyFragment : hosts
+HostActivity ..> HostQuizFragment : hosts
+HostActivity ..> ResultFragment : hosts
+PlayerActivity ..> PlayerQuizFragment : hosts
+PlayerActivity ..> ResultFragment : hosts
+
+' Fragments beobachten ViewModels
+LobbyFragment --> HostViewModel : observes
+HostQuizFragment --> HostViewModel : observes
+ResultFragment --> HostViewModel : observes
+PlayerQuizFragment --> PlayerViewModel : observes
+
+' ViewModels nutzen SharedViewModel
+HostViewModel --> SharedViewModel : uses
+PlayerViewModel --> SharedViewModel : uses
+
+' ViewModels -> Domain
+HostViewModel ..> QuizSession : uses
+HostViewModel ..> Question : uses
+HostViewModel ..> Answer : uses
+PlayerViewModel ..> Question : uses
+PlayerViewModel ..> Answer : uses
+PlayerViewModel ..> ScoreBoard : uses
+SharedViewModel ..> INetwork : uses
+
+@enduml

@@ -1,0 +1,111 @@
+@startuml quiz_app
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam classBackgroundColor #F8F8F8
+skinparam classBorderColor #888888
+skinparam arrowColor #555555
+skinparam linetype ortho
+
+abstract class User {
+  - userId: String
+  - username: String
+  --
+  + getUsername(): String
+  + setUsername(name: String)
+}
+
+class Host {
+  - roomCode: String
+  --
+  + createSession(): QuizSession
+  + startSession()
+  + sendQuestion(q: Question)
+  + viewAnswers(): List<Answer>
+  + displayResults()
+}
+
+class Player {
+  - score: Int
+  --
+  + joinSession(code: String)
+  + receiveQuestion(q: Question)
+  + submitAnswer(a: Answer)
+  + viewFinalScores()
+}
+
+class QuizSession {
+  - sessionId: String
+  --
+  + addPlayer(p: Player)
+  + nextQuestion(): Question
+  + collectAnswer(a: Answer)
+  + calcScores(): ScoreBoard
+  + getState(): SessionState
+}
+
+class Question {
+  - questionId: String
+  --
+  + getText(): String
+  + getChoices(): List<String>
+  + isCorrect(a: Answer): Boolean
+  + getTimeLimitSec(): Int
+}
+
+class Answer {
+  - playerId: String
+  --
+  + getChoice(): String
+  + getTimestamp(): Long
+  + isCorrect(): Boolean
+}
+
+class ScoreBoard {
+  - scores: Map<Player, Int>
+  --
+  + getRanking(): List<Player>
+  + getWinner(): Player
+  + getScore(p: Player): Int
+}
+
+enum SessionState {
+  WAITING
+  ACTIVE
+  PAUSED
+  FINISHED
+}
+
+interface INetwork {
+  + connect(url: String)
+  + disconnect()
+  + send(msg: String)
+  + onMessage(callback: (String) -> Unit)
+}
+
+class QuizRepository {
+  - db: LocalDatabase
+  --
+  + saveQuestions(qs: List<Question>)
+  + loadQuestions(): List<Question>
+}
+
+' Vererbung
+User <|-- Host
+User <|-- Player
+
+' Assoziationen
+Host ..> QuizSession : creates
+Player ..> Answer : submits
+
+' Aggregation
+QuizSession "1" o-- "1..*" Question
+QuizSession "1" o-- "0..*" Answer
+
+' Abhängigkeiten
+QuizSession ..> ScoreBoard : generates
+QuizSession ..> SessionState : uses
+QuizSession ..> INetwork : uses
+ScoreBoard ..> QuizRepository : persists
+
+@enduml
