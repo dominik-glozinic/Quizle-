@@ -1,0 +1,51 @@
+@startuml
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+package "Persistenzschicht" {
+
+  interface QuizRepository {
+    + insertQuiz(quiz: QuizEntity)
+    + getAllQuizzes(): List<QuizEntity>
+    + getQuizById(id: Int): QuizEntity
+    + deleteQuiz(quiz: QuizEntity)
+  }
+
+  class RoomQuizDao <<@Dao>> {
+    + insertQuiz(quiz: QuizEntity)
+    + getAllQuizzes(): List<QuizEntity>
+    + getQuizById(id: Int): QuizEntity
+    + deleteQuiz(quiz: QuizEntity)
+  }
+
+  class QuizEntity <<@Entity>> {
+    + id: Int <<@PrimaryKey>>
+    + title: String
+    + createdAt: Long
+    + description: String
+    .. gespeichert in: SQL (Room) ..
+  }
+
+  class Question <<data class>> {
+    + questionId: Int
+    + quizId: Int <<FK>>
+    + questionText: String
+    + answers: List<Answer>
+    .. gespeichert als: Objekt ..
+  }
+
+  class Answer <<data class>> {
+    + answerId: Int
+    + answerText: String
+    + isCorrect: Boolean
+  }
+
+  RoomQuizDao ..|> QuizRepository : implements
+
+  RoomQuizDao --> QuizEntity : liest/schreibt
+  RoomQuizDao --> Question : enthält
+
+  Question "1" --> "1..*" Answer
+
+}
+@enduml
