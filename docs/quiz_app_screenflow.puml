@@ -32,7 +32,7 @@ fork again
 end fork
 
 |Gemeinsam|
-:Ergebnis-Screen\n//Rangliste & Gewinner anzeigen//;
+:Ergebnis-Screen\n//Leaderboard & Gewinner anzeigen//;
 
 if (Nochmal spielen?) then (ja)
   :Home Screen\n//„Host a Quiz" / „Join a Quiz"//;

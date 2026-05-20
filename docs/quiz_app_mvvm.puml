@@ -54,14 +54,14 @@ package "UI-Schicht" #EEF0FF {
     --
     + showQuestion(q: Question)
     + showAnswerChoices()
-    + onAnswerSelected(a: String)
+    + onAnswerSelected(answerId: String)
   }
 
   class ResultFragment {
     - binding: FragResultBinding
     --
-    + showScoreBoard(sb: ScoreBoard)
-    + highlightWinner(p: Player)
+    + showLeaderboard(lb: Leaderboard)
+    + highlightWinner(entry: LeaderboardEntry)
   }
 
 }
@@ -69,49 +69,57 @@ package "UI-Schicht" #EEF0FF {
 package "ViewModel-Schicht" #FFF0EE {
 
   class HostViewModel {
-    - session: QuizSession
+    - hostService: GameHostService
     --
-    + sessionState: LiveData<SessionState>
+    + sessionState: LiveData<GameState>
     + currentQuestion: LiveData<Question>
-    + playerAnswers: LiveData<List<Answer>>
+    + playerAnswers: LiveData<List<PlayerAnswer>>
+    + leaderboard: LiveData<Leaderboard>
     --
-    + createSession()
+    + createSession(quiz: Quiz)
     + startSession()
-    + sendNextQuestion()
+    + advanceToNextQuestion()
+    + endGame()
   }
 
   class PlayerViewModel {
-    - player: Player
+    - playerService: GamePlayerService
     --
     + currentQuestion: LiveData<Question>
-    + score: LiveData<Int>
-    + finalScores: LiveData<ScoreBoard>
+    + leaderboard: LiveData<Leaderboard>
     --
-    + joinSession(code: String)
-    + submitAnswer(a: Answer)
-    + loadFinalScores()
-  }
-
-  class SharedViewModel {
-    - network: INetwork
-    --
-    + connectionState: LiveData<Boolean>
-    --
-    + connect(url: String)
-    + disconnect()
+    + joinSession(url: String, username: String)
+    + pollForQuestion()
+    + submitAnswer(questionId: String, answerId: String)
+    + loadLeaderboard()
   }
 
 }
 
 package "Domain-Schicht (Referenz)" #F0F0F0 {
-  class QuizSession
+  class GameSession
+  class Quiz
   class Question
-  class Answer
-  class ScoreBoard
-  interface INetwork
+  class PlayerAnswer
+  class Leaderboard
+  class LeaderboardEntry
+  enum GameState
+  interface IHostNetwork
+  interface IPlayerNetwork
 }
 
-' Activity hostet Fragments (gestrichelt)
+package "Netzwerk-Schicht (Referenz)" #EAF3DE {
+  class GameHostService
+  class GamePlayerService
+  class NetworkDiscovery
+  class GameStateDto
+}
+
+' Realisierung: Networking implementiert Interfaces
+GameHostService ..|> IHostNetwork
+GamePlayerService ..|> IPlayerNetwork
+
+' Activity hostet Fragments
 HostActivity ..> LobbyFragment : hosts
 HostActivity ..> HostQuizFragment : hosts
 HostActivity ..> ResultFragment : hosts
@@ -123,18 +131,19 @@ LobbyFragment --> HostViewModel : observes
 HostQuizFragment --> HostViewModel : observes
 ResultFragment --> HostViewModel : observes
 PlayerQuizFragment --> PlayerViewModel : observes
+ResultFragment --> PlayerViewModel : observes
 
-' ViewModels nutzen SharedViewModel
-HostViewModel --> SharedViewModel : uses
-PlayerViewModel --> SharedViewModel : uses
+' ViewModels -> Networking-Services
+HostViewModel --> GameHostService : uses
+PlayerViewModel --> GamePlayerService : uses
 
 ' ViewModels -> Domain
-HostViewModel ..> QuizSession : uses
+HostViewModel ..> GameSession : uses
+HostViewModel ..> Quiz : uses
 HostViewModel ..> Question : uses
-HostViewModel ..> Answer : uses
+HostViewModel ..> PlayerAnswer : uses
+HostViewModel ..> Leaderboard : uses
 PlayerViewModel ..> Question : uses
-PlayerViewModel ..> Answer : uses
-PlayerViewModel ..> ScoreBoard : uses
-SharedViewModel ..> INetwork : uses
+PlayerViewModel ..> Leaderboard : uses
 
 @enduml

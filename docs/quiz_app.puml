@@ -18,74 +18,111 @@ abstract class User {
 class Host {
   - roomCode: String
   --
-  + createSession(): QuizSession
-  + startSession()
-  + sendQuestion(q: Question)
-  + viewAnswers(): List<Answer>
-  + displayResults()
+  + createSession(quiz: Quiz): GameSession
+  + startSession(sessionId: String)
+  + advanceToNextQuestion(sessionId: String)
+  + viewAnswers(): List<PlayerAnswer>
+  + displayResults(): Leaderboard
 }
 
 class Player {
-  - score: Int
   --
-  + joinSession(code: String)
-  + receiveQuestion(q: Question)
-  + submitAnswer(a: Answer)
-  + viewFinalScores()
+  + joinSession(url: String, username: String): Result<Player>
+  + pollForQuestion(): Result<Question?>
+  + submitAnswer(questionId: String, answerId: String): Result<Unit>
+  + viewFinalScores(): Result<Leaderboard>
 }
 
-class QuizSession {
-  - sessionId: String
+class Quiz {
+  - quizId: String
+  - title: String
   --
-  + addPlayer(p: Player)
-  + nextQuestion(): Question
-  + collectAnswer(a: Answer)
-  + calcScores(): ScoreBoard
-  + getState(): SessionState
+  + getQuestions(): List<Question>
+  + addQuestion(q: Question)
+}
+
+class GameSession {
+  + sessionId: String
+  + hostIpAddress: String
+  + port: Int
+  + state: GameState
+  + currentQuestionIndex: Int
+  + startedAt: Long?
+  --
+  + getJoinUrl(): String
+  + getCurrentQuestion(): Question?
+  + advance()
+  + isFinished(): Boolean
 }
 
 class Question {
   - questionId: String
+  - timerSeconds: Int
   --
   + getText(): String
   + getChoices(): List<String>
-  + isCorrect(a: Answer): Boolean
+  + isCorrect(answerId: String): Boolean
   + getTimeLimitSec(): Int
 }
 
-class Answer {
+class PlayerAnswer {
   - playerId: String
+  - questionId: String
+  - answerId: String
+  - answeredAtMs: Long
   --
-  + getChoice(): String
-  + getTimestamp(): Long
   + isCorrect(): Boolean
+  + getTimestamp(): Long
 }
 
-class ScoreBoard {
-  - scores: Map<Player, Int>
+class Leaderboard {
+  - entries: List<LeaderboardEntry>
   --
-  + getRanking(): List<Player>
-  + getWinner(): Player
-  + getScore(p: Player): Int
+  + getRanking(): List<LeaderboardEntry>
+  + getWinner(): LeaderboardEntry
 }
 
-enum SessionState {
+class LeaderboardEntry {
+  + playerId: String
+  + username: String
+  + score: Int
+}
+
+class ScoringService {
+  + MAX_POINTS: Int
+  + MIN_POINTS: Int
+  --
+  + calculatePoints(answeredAtMs: Long, questionOpenedAtMs: Long, timerSeconds: Int, isCorrect: Boolean): Int
+  + buildLeaderboard(session: GameSession, answers: List<PlayerAnswer>): Leaderboard
+}
+
+enum GameState {
   WAITING
   ACTIVE
   PAUSED
   FINISHED
 }
 
-interface INetwork {
-  + connect(url: String)
-  + disconnect()
-  + send(msg: String)
-  + onMessage(callback: (String) -> Unit)
+' Interface mit Host- und Player-spezifischen Methoden
+interface IHostNetwork {
+  + startServer(session: GameSession)
+  + stopServer()
+  + broadcastQuestion(q: Question)
+  + broadcastLeaderboard(lb: Leaderboard)
+}
+
+interface IPlayerNetwork {
+  + join(url: String, username: String): Result<Player>
+  + pollGameState(): Result<GameStateDto>
+  + submitAnswer(questionId: String, answerId: String): Result<Unit>
+  + fetchLeaderboard(): Result<Leaderboard>
 }
 
 class QuizRepository {
   - db: LocalDatabase
   --
+  + saveQuiz(quiz: Quiz)
+  + loadQuiz(quizId: String): Quiz
   + saveQuestions(qs: List<Question>)
   + loadQuestions(): List<Question>
 }
@@ -95,17 +132,20 @@ User <|-- Host
 User <|-- Player
 
 ' Assoziationen
-Host ..> QuizSession : creates
-Player ..> Answer : submits
+Host ..> GameSession : creates
+Player ..> PlayerAnswer : submits
 
 ' Aggregation
-QuizSession "1" o-- "1..*" Question
-QuizSession "1" o-- "0..*" Answer
+Quiz "1" o-- "1..*" Question
+GameSession "1" o-- "0..*" PlayerAnswer
+GameSession --> GameState : uses
 
 ' Abhängigkeiten
-QuizSession ..> ScoreBoard : generates
-QuizSession ..> SessionState : uses
-QuizSession ..> INetwork : uses
-ScoreBoard ..> QuizRepository : persists
+Host ..> IHostNetwork : uses
+Player ..> IPlayerNetwork : uses
+GameSession ..> ScoringService : uses
+ScoringService ..> Leaderboard : generates
+Leaderboard *-- LeaderboardEntry : contains
+QuizRepository ..> Quiz : persists
 
 @enduml
